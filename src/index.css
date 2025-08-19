@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === Global Styles === */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: sans-serif;
+  background-color: #f3f4f6; /* abu-abu terang (Tailwind gray-100) */
+}
+
+/* Bisa tambahkan style custom global lain di sini kalau perlu */
