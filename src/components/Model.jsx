@@ -32,7 +32,7 @@ function setEmissive(mat, colorOrNull, intensity = 0.35) {
 }
 
 function KosanModel({ setHovered, setMeshes, selectedMesh, colors, decals, decalTransforms }) {
-  const { scene } = useGLTF("/assets/kosan bahan.glb");
+  const { scene } = useGLTF("/assets/kosan_bahan.glb");
   const originalColors = useRef({});
   const texturesRef = useRef({});
 
