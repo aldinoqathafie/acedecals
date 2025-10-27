@@ -24,10 +24,10 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh 
       if (!node.isMesh) return;
       node.material = node.material.clone();
 
-      // 🌟 Material glossy
-      node.material.roughness = 0.12;
+      // 🌟 Glossy material
+      node.material.roughness = 0.15;
       node.material.metalness = 0.9;
-      node.material.envMapIntensity = 1.8;
+      node.material.envMapIntensity = 1.7;
       node.castShadow = true;
       node.receiveShadow = true;
 
@@ -35,7 +35,6 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh 
       const decalConf = decalData[meshName];
       const colorConf = colorData[meshName];
 
-      // Decal > Warna
       if (decalConf?.type === "decal" && decalConf?.value) {
         const url =
           typeof decalConf.value === "string"
@@ -49,7 +48,7 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh 
             texture.colorSpace = THREE.SRGBColorSpace;
             texture.minFilter = THREE.LinearMipmapLinearFilter;
             texture.magFilter = THREE.LinearFilter;
-            texture.anisotropy = 16;
+            texture.anisotropy = 8;
             node.material.map = texture;
             node.material.color.set("#ffffff");
             node.material.needsUpdate = true;
@@ -111,6 +110,7 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const envMap = useLoader(RGBELoader, "/textures/studio_small_08_2k.hdr");
 
+  const isMobile = window.innerWidth < 768;
   envMap.mapping = THREE.EquirectangularReflectionMapping;
 
   useEffect(() => {
@@ -121,7 +121,7 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
 
   return (
     <div className="relative w-full h-full">
-      {/* Background static image */}
+      {/* 🖼 Background image */}
       <div
         style={{
           position: "absolute",
@@ -129,7 +129,7 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           backgroundImage: "url('/images/workshop.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          filter: "brightness(0.85)",
+          filter: "brightness(0.9)",
           zIndex: 0,
         }}
       />
@@ -155,18 +155,30 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
       )}
 
       <Canvas
-        shadows
-        camera={{ position: [3, 2.2, 3.8], fov: 38 }}
-        gl={{ toneMappingExposure: 1.1, outputEncoding: THREE.sRGBEncoding }}
-        style={{ position: "relative", zIndex: 1 }}
+        shadows={!isMobile}
+        dpr={isMobile ? 1 : 2}
+        camera={{
+          position: isMobile ? [2.2, 1.6, 2.8] : [3, 2.2, 3.8],
+          fov: isMobile ? 45 : 38,
+        }}
+        gl={{
+          antialias: !isMobile,
+          toneMappingExposure: isMobile ? 1.0 : 1.1,
+          outputEncoding: THREE.sRGBEncoding,
+        }}
+        style={{
+          position: "relative",
+          zIndex: 1,
+          width: "100%",
+          height: isMobile ? "100vh" : "100%",
+        }}
       >
-        <ambientLight intensity={0.3} />
+        <ambientLight intensity={0.35} />
         <directionalLight position={[5, 5, 4]} intensity={0.8} castShadow />
         <directionalLight position={[-4, 3, -3]} intensity={0.4} />
-        <hemisphereLight intensity={0.2} />
+        <hemisphereLight intensity={0.25} />
 
         <Suspense fallback={<Html center>Loading model...</Html>}>
-          {/* HDRI lighting only */}
           <Environment map={envMap} background={false} />
           <WoodenTable />
           <BirdCage
@@ -193,10 +205,12 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           target={[0, 0.1, 0]}
         />
 
-        <EffectComposer>
-          <Bloom intensity={0.15} luminanceThreshold={0.6} luminanceSmoothing={0.25} />
-          <ToneMapping adaptive={true} />
-        </EffectComposer>
+        {!isMobile && (
+          <EffectComposer>
+            <Bloom intensity={0.15} luminanceThreshold={0.6} luminanceSmoothing={0.25} />
+            <ToneMapping adaptive={true} />
+          </EffectComposer>
+        )}
       </Canvas>
     </div>
   );
