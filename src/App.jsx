@@ -81,6 +81,8 @@ function UserHome({ user, handleLogout }) {
       {/* 🧱 3D Viewer */}
       <Viewer3D
         key={activeModel}
+        user={user}
+        onLogout={handleLogout}
         modelPath={`/models/${activeModel}`}
         colorData={colorDataMap[activeModel] || {}}
         decalData={decalDataMap[activeModel] || {}}

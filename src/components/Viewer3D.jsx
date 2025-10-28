@@ -61,7 +61,6 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh,
         node.material.needsUpdate = true;
       }
 
-      // Highlight mesh
       if (highlightMesh && highlightMesh === meshName) {
         node.material.emissive = new THREE.Color("#00ffff");
         node.material.emissiveIntensity = 0.6;
@@ -95,16 +94,13 @@ function RotatingEnvironment({ envMap }) {
   const ref = useRef();
   useFrame((state, delta) => {
     if (ref.current) {
-      ref.current.rotation.y += delta * 0.05; // rotasi lambat dan smooth
+      ref.current.rotation.y += delta * 0.05;
     }
   });
-
-  return (
-    <primitive ref={ref} object={envMap} />
-  );
+  return <primitive ref={ref} object={envMap} />;
 }
 
-export default function Viewer3D({ modelPath, colorData, decalData, highlightMesh }) {
+export default function Viewer3D({ modelPath, colorData, decalData, highlightMesh, user, onLogout }) {
   const [hoveredMesh, setHoveredMesh] = useState(null);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
@@ -115,7 +111,6 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
     setIsMobile(mobile);
   }, []);
 
-  // === Fullscreen toggle ===
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(console.error);
@@ -126,7 +121,6 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
     }
   };
 
-  // === HDRI Lighting ===
   const envMap = useLoader(RGBELoader, "/textures/studio_small_08_2k.hdr");
   envMap.mapping = THREE.EquirectangularReflectionMapping;
   envMap.encoding = THREE.sRGBEncoding;
@@ -139,7 +133,7 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
 
   return (
     <div className="relative w-full h-full" style={{ zIndex: 1 }}>
-      {/* 🌆 Background tetap tampil */}
+      {/* 🪶 Background tetap tampil */}
       <div
         style={{
           position: "absolute",
@@ -152,7 +146,7 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
         }}
       />
 
-      {/* Tooltip hover mesh */}
+      {/* Tooltip hover */}
       {hoveredMesh && (
         <div
           style={{
@@ -191,17 +185,14 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           pointerEvents: "auto",
         }}
       >
-        {/* ☀️ Cahaya warm studio */}
         <ambientLight intensity={0.7} color={"#ffe4b3"} />
         <directionalLight position={[4, 6, 5]} intensity={1.4} color={"#ffd9a6"} castShadow />
         <spotLight position={[0, 5, 2]} angle={0.45} penumbra={0.5} intensity={2.5} color={"#fff2dd"} castShadow />
         <pointLight position={[0, 1.5, 1.2]} intensity={0.7} color={"#ffdca8"} />
 
         <Suspense fallback={<Html center>Loading model...</Html>}>
-          {/* HDRI reflection dinamis */}
           <Environment files="/textures/studio_small_08_2k.hdr" background={false} />
           <RotatingEnvironment envMap={new THREE.Group()} />
-
           <BirdCage
             modelPath={modelPath}
             colorData={colorData}
@@ -219,13 +210,7 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           />
         </Suspense>
 
-        <OrbitControls
-          enableZoom={false}
-          enablePan={false}
-          minPolarAngle={Math.PI / 4}
-          maxPolarAngle={Math.PI / 2}
-          target={[0, 0.1, 0]}
-        />
+        <OrbitControls enableZoom={false} enablePan={false} minPolarAngle={Math.PI / 4} maxPolarAngle={Math.PI / 2} target={[0, 0.1, 0]} />
 
         {!isMobile && (
           <EffectComposer>
@@ -235,13 +220,25 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
         )}
       </Canvas>
 
-      {/* 🔳 Tombol fullscreen */}
-      <button
-        onClick={toggleFullscreen}
-        className="absolute top-4 left-4 bg-black/60 hover:bg-black/80 text-white text-xs px-3 py-2 rounded-lg backdrop-blur-md border border-white/10 z-40 transition-all"
-      >
-        {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-      </button>
+      {/* 👤 User Info + Logout + Fullscreen (Desktop Only) */}
+      {!isMobile && user && (
+        <div className="absolute top-4 left-4 flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-lg text-white text-sm border border-white/10 z-40">
+          <img src={user.photoURL} alt="user" className="w-6 h-6 rounded-full border border-gray-500" />
+          <span>{user.displayName}</span>
+          <button
+            onClick={onLogout}
+            className="bg-red-600 hover:bg-red-500 px-2 py-1 rounded text-xs"
+          >
+            Logout
+          </button>
+          <button
+            onClick={toggleFullscreen}
+            className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-xs"
+          >
+            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

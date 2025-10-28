@@ -1,98 +1,86 @@
-import React, { useRef } from "react";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
- Props:
- - models: [{id,name,file}]
- - activeModel
- - onSelect(file)
- - highlightedMesh (string|null)
- - onUploadDecalForHighlighted(file) -> should return true/false
- - onResetModel()
- - onResetHighlightedMesh()
-*/
+ * ModelSelector Carousel — smooth infinite scroll
+ * Props:
+ * - models: [{id,name,file}]
+ * - activeModel
+ * - onSelect(file)
+ * - highlightedMesh (optional)
+ */
 
 export default function ModelSelector({
   models = [],
   activeModel,
   onSelect,
   highlightedMesh,
-  onUploadDecalForHighlighted,
-  onResetModel,
-  onResetHighlightedMesh,
 }) {
-  const fileRef = useRef();
+  const [index, setIndex] = useState(0);
 
-  const triggerFile = () => {
-    fileRef.current?.click();
-  };
+  // Sinkronkan index dengan model aktif
+  useEffect(() => {
+    const activeIdx = models.findIndex((m) => m.file === activeModel);
+    if (activeIdx >= 0) setIndex(activeIdx);
+  }, [activeModel, models]);
+
+  const prevModel = () =>
+    setIndex((prev) => (prev === 0 ? models.length - 1 : prev - 1));
+  const nextModel = () =>
+    setIndex((prev) => (prev === models.length - 1 ? 0 : prev + 1));
+
+  useEffect(() => {
+    if (models[index]) onSelect(models[index].file);
+  }, [index]);
 
   return (
-    <div className="w-full flex flex-col items-center">
-      <div className="w-full bg-white/5 backdrop-blur rounded-2xl px-3 py-2 flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* model list */}
-        <div className="flex gap-2 overflow-x-auto py-1">
-          {models.map((m) => {
-            const active = activeModel === m.file;
-            return (
-              <button
-                key={m.id}
-                onClick={() => onSelect(m.file)}
-                className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium ${
-                  active ? "bg-indigo-600 text-white" : "bg-white/8 text-white"
-                }`}
-              >
-                {m.name}
-              </button>
-            );
-          })}
+    <div className="w-full flex flex-col items-center select-none">
+      {/* === Carousel Container === */}
+      <div
+        className="relative flex items-center justify-center bg-black/50 
+                   backdrop-blur-lg border border-white/10 rounded-2xl 
+                   px-5 py-3 shadow-[0_0_25px_rgba(0,0,0,0.5)]"
+        style={{ width: "min(90%, 500px)" }}
+      >
+        {/* Tombol kiri */}
+        <button
+          onClick={prevModel}
+          className="absolute left-2 text-gray-400 hover:text-white transition"
+        >
+          <ChevronLeft size={34} />
+        </button>
+
+        {/* Carousel isi */}
+        <div className="flex items-center justify-center w-full overflow-hidden">
+          <AnimatePresence initial={false} mode="wait">
+            <motion.div
+              key={models[index]?.id || "none"}
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              transition={{ duration: 0.3 }}
+              className="text-center text-white text-lg font-semibold tracking-wide"
+            >
+              {models[index]?.name?.toUpperCase() || "No Model"}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        {/* action buttons (sejajar di kanan pada md, di bawah pada mobile) */}
-        <div className="flex gap-2 items-center">
-          <button
-            onClick={() => {
-              if (highlightedMesh) {
-                onResetHighlightedMesh?.();
-              } else {
-                onResetModel?.();
-              }
-            }}
-            className="px-3 py-2 rounded-lg text-sm bg-rose-600 text-white"
-            title={highlightedMesh ? "Reset highlighted mesh" : "Reset model"}
-          >
-            {highlightedMesh ? "Reset Mesh" : "Reset Model"}
-          </button>
-
-          <button
-            onClick={triggerFile}
-            className="px-3 py-2 rounded-lg text-sm bg-emerald-500 text-black"
-            title={highlightedMesh ? "Upload decal to highlighted mesh" : "Select mesh first to upload decal"}
-            disabled={!highlightedMesh}
-          >
-            Upload Decal
-          </button>
-
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              const ok = onUploadDecalForHighlighted?.(f);
-              if (!ok) {
-                alert("Tidak ada mesh yang dipilih untuk decal. Klik mesh di model untuk memilih.");
-              }
-              e.target.value = "";
-            }}
-          />
-        </div>
+        {/* Tombol kanan */}
+        <button
+          onClick={nextModel}
+          className="absolute right-2 text-gray-400 hover:text-white transition"
+        >
+          <ChevronRight size={34} />
+        </button>
       </div>
 
-      {/* helper tip */}
+      {/* Info mesh */}
       <div className="mt-2 text-xs text-white/70 text-center">
-        {highlightedMesh ? `Selected mesh: ${highlightedMesh}` : "Klik bagian model untuk memilih mesh (lihat tooltip)."}
+        {highlightedMesh
+          ? `Selected mesh: ${highlightedMesh}`
+          : "Klik bagian model untuk memilih mesh (lihat tooltip)."}
       </div>
     </div>
   );
