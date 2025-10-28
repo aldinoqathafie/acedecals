@@ -12,7 +12,7 @@ import { RGBELoader } from "three-stdlib";
 import { EffectComposer, Bloom, ToneMapping } from "@react-three/postprocessing";
 import { meshLabelMap } from "../config/meshMap.js";
 
-function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh }) {
+function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh, isMobile }) {
   const { scene } = useGLTF(modelPath);
   const modelName = modelPath.split("/").pop().replace(".glb", "");
   const labelMap = meshLabelMap[modelName] || {};
@@ -45,9 +45,9 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh 
           (texture) => {
             texture.flipY = false;
             texture.colorSpace = THREE.SRGBColorSpace;
-            texture.minFilter = THREE.LinearMipmapLinearFilter;
+            texture.minFilter = isMobile ? THREE.LinearFilter : THREE.LinearMipmapLinearFilter;
             texture.magFilter = THREE.LinearFilter;
-            texture.anisotropy = 16;
+            texture.anisotropy = isMobile ? 4 : 16;
             node.material.map = texture;
             node.material.color.set("#ffffff");
             node.material.needsUpdate = true;
@@ -69,7 +69,7 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh 
         node.material.emissiveIntensity = 0;
       }
     });
-  }, [scene, JSON.stringify(colorData), JSON.stringify(decalData), highlightMesh]);
+  }, [scene, JSON.stringify(colorData), JSON.stringify(decalData), highlightMesh, isMobile]);
 
   return (
     <primitive
@@ -90,11 +90,11 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh 
   );
 }
 
-function WoodenTable() {
+function WoodenTable({ isMobile }) {
   const tex = useLoader(THREE.TextureLoader, "/textures/wood.jpg");
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(2, 2);
-  tex.anisotropy = 8;
+  tex.anisotropy = isMobile ? 2 : 8;
 
   return (
     <mesh position={[0, -1, 0]} castShadow receiveShadow>
@@ -107,8 +107,14 @@ function WoodenTable() {
 export default function Viewer3D({ modelPath, colorData, decalData, highlightMesh }) {
   const [hoveredMesh, setHoveredMesh] = useState(null);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-  const envMap = useLoader(RGBELoader, "/textures/studio_small_08_2k.hdr");
+  const [isMobile, setIsMobile] = useState(false);
 
+  useEffect(() => {
+    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    setIsMobile(mobile);
+  }, []);
+
+  const envMap = useLoader(RGBELoader, "/textures/studio_small_08_2k.hdr");
   envMap.mapping = THREE.EquirectangularReflectionMapping;
 
   useEffect(() => {
@@ -119,7 +125,6 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
 
   return (
     <div className="relative w-full h-full" style={{ zIndex: 1 }}>
-      {/* 🪵 Background static image */}
       <div
         style={{
           position: "absolute",
@@ -132,7 +137,6 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
         }}
       />
 
-      {/* 🏷 Tooltip nama mesh */}
       {hoveredMesh && (
         <div
           style={{
@@ -153,11 +157,17 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
         </div>
       )}
 
-      {/* 🧱 3D Canvas */}
       <Canvas
-        shadows
-        camera={{ position: [3, 2.2, 3.8], fov: 38 }}
-        gl={{ toneMappingExposure: 1.1, outputEncoding: THREE.sRGBEncoding }}
+        shadows={!isMobile}
+        camera={{
+          position: isMobile ? [2.5, 2, 3.2] : [3, 2.2, 3.8],
+          fov: isMobile ? 45 : 38,
+        }}
+        gl={{
+          toneMappingExposure: isMobile ? 0.9 : 1.1,
+          outputEncoding: THREE.sRGBEncoding,
+          antialias: !isMobile,
+        }}
         style={{
           position: "relative",
           zIndex: 1,
@@ -170,21 +180,22 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
         <hemisphereLight intensity={0.2} />
 
         <Suspense fallback={<Html center>Loading model...</Html>}>
-          <Environment map={envMap} background={false} />
-          <WoodenTable />
+          {!isMobile && <Environment map={envMap} background={false} />}
+          <WoodenTable isMobile={isMobile} />
           <BirdCage
             modelPath={modelPath}
             colorData={colorData}
             decalData={decalData}
             onHoverMesh={setHoveredMesh}
             highlightMesh={highlightMesh}
+            isMobile={isMobile}
           />
           <ContactShadows
             position={[0, -0.35, 0]}
-            opacity={0.45}
-            scale={4.5}
-            blur={3.5}
-            far={1.6}
+            opacity={isMobile ? 0.3 : 0.45}
+            scale={isMobile ? 3.5 : 4.5}
+            blur={isMobile ? 1.5 : 3.5}
+            far={isMobile ? 1.0 : 1.6}
           />
         </Suspense>
 
@@ -196,10 +207,12 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           target={[0, 0.1, 0]}
         />
 
-        <EffectComposer>
-          <Bloom intensity={0.15} luminanceThreshold={0.6} luminanceSmoothing={0.25} />
-          <ToneMapping adaptive={true} />
-        </EffectComposer>
+        {!isMobile && (
+          <EffectComposer>
+            <Bloom intensity={0.15} luminanceThreshold={0.6} luminanceSmoothing={0.25} />
+            <ToneMapping adaptive={true} />
+          </EffectComposer>
+        )}
       </Canvas>
     </div>
   );
