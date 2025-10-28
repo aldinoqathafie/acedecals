@@ -24,9 +24,10 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh,
       if (!node.isMesh) return;
       node.material = node.material.clone();
 
-      node.material.roughness = 0.12;
-      node.material.metalness = 0.9;
-      node.material.envMapIntensity = 1.8;
+      // 🌟 Tingkatkan pencahayaan dan pantulan
+      node.material.roughness = 0.1;
+      node.material.metalness = 0.8;
+      node.material.envMapIntensity = 2.2;
       node.castShadow = true;
       node.receiveShadow = true;
 
@@ -34,6 +35,7 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh,
       const decalConf = decalData[meshName];
       const colorConf = colorData[meshName];
 
+      // 📜 Terapkan tekstur decal
       if (decalConf?.type === "decal" && decalConf?.value) {
         const url =
           typeof decalConf.value === "string"
@@ -55,12 +57,15 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh,
           undefined,
           (err) => console.error("❌ Gagal load texture:", meshName, err)
         );
-      } else if (colorConf?.type === "color") {
+      }
+      // 🎨 Terapkan warna
+      else if (colorConf?.type === "color") {
         node.material.map = null;
         node.material.color = new THREE.Color(colorConf.value);
         node.material.needsUpdate = true;
       }
 
+      // ✨ Efek highlight
       if (highlightMesh && highlightMesh === meshName) {
         node.material.emissive = new THREE.Color("#00ffff");
         node.material.emissiveIntensity = 0.6;
@@ -99,7 +104,7 @@ function WoodenTable({ isMobile }) {
   return (
     <mesh position={[0, -1, 0]} castShadow receiveShadow>
       <cylinderGeometry args={[1.4, 1.4, 0.08, 64]} />
-      <meshStandardMaterial map={tex} roughness={0.6} metalness={0.1} />
+      <meshStandardMaterial map={tex} roughness={0.5} metalness={0.2} />
     </mesh>
   );
 }
@@ -124,7 +129,8 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
   }, []);
 
   return (
-    <div className="relative w-full h-full" style={{ zIndex: 1 }}>
+    <div className="relative w-full h-screen overflow-hidden" style={{ zIndex: 1 }}>
+      {/* 🔲 Background */}
       <div
         style={{
           position: "absolute",
@@ -132,11 +138,12 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           backgroundImage: "url('/images/workshop.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          filter: "brightness(0.85)",
+          filter: "brightness(0.95)",
           zIndex: 0,
         }}
       />
 
+      {/* 🏷️ Tooltip saat hover */}
       {hoveredMesh && (
         <div
           style={{
@@ -157,16 +164,17 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
         </div>
       )}
 
+      {/* 🎥 Canvas 3D */}
       <Canvas
         shadows={!isMobile}
         camera={{
-          position: isMobile ? [2.5, 2, 3.2] : [3, 2.2, 3.8],
-          fov: isMobile ? 45 : 38,
+          position: isMobile ? [2.3, 2.1, 3.0] : [3.2, 2.5, 3.8],
+          fov: isMobile ? 46 : 38,
         }}
         gl={{
-          toneMappingExposure: isMobile ? 0.9 : 1.1,
+          toneMappingExposure: isMobile ? 1.3 : 1.5,
           outputEncoding: THREE.sRGBEncoding,
-          antialias: !isMobile,
+          antialias: true,
         }}
         style={{
           position: "relative",
@@ -174,10 +182,11 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           pointerEvents: "auto",
         }}
       >
-        <ambientLight intensity={0.3} />
-        <directionalLight position={[5, 5, 4]} intensity={0.8} castShadow />
-        <directionalLight position={[-4, 3, -3]} intensity={0.4} />
-        <hemisphereLight intensity={0.2} />
+        {/* 💡 Lights */}
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[5, 6, 5]} intensity={1.2} castShadow />
+        <directionalLight position={[-4, 3, -3]} intensity={0.6} />
+        <hemisphereLight intensity={0.4} />
 
         <Suspense fallback={<Html center>Loading model...</Html>}>
           {!isMobile && <Environment map={envMap} background={false} />}
@@ -192,9 +201,9 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           />
           <ContactShadows
             position={[0, -0.35, 0]}
-            opacity={isMobile ? 0.3 : 0.45}
-            scale={isMobile ? 3.5 : 4.5}
-            blur={isMobile ? 1.5 : 3.5}
+            opacity={isMobile ? 0.35 : 0.5}
+            scale={isMobile ? 3.5 : 5}
+            blur={isMobile ? 2 : 3.5}
             far={isMobile ? 1.0 : 1.6}
           />
         </Suspense>
@@ -209,7 +218,7 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
 
         {!isMobile && (
           <EffectComposer>
-            <Bloom intensity={0.15} luminanceThreshold={0.6} luminanceSmoothing={0.25} />
+            <Bloom intensity={0.25} luminanceThreshold={0.5} luminanceSmoothing={0.25} />
             <ToneMapping adaptive={true} />
           </EffectComposer>
         )}

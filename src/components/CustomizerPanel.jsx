@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { meshLabelMap } from "../config/meshMap.js";
 import ImageMappingEditor from "./ImageMappingEditor.jsx";
 
@@ -11,6 +11,14 @@ export default function CustomizerPanel({
   const [editTarget, setEditTarget] = useState(null);
   const [previewImages, setPreviewImages] = useState({});
   const [uploadProgress, setUploadProgress] = useState({});
+  const [isMobile, setIsMobile] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
+
+  useEffect(() => {
+    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    setIsMobile(mobile);
+    if (mobile) setIsOpen(false);
+  }, []);
 
   const modelKey = String(activeModel).replace(".glb", "");
   const meshMap = meshLabelMap[modelKey] || {};
@@ -57,11 +65,16 @@ export default function CustomizerPanel({
 
   return (
     <>
+      {/* === SIDEBAR PANEL === */}
       <aside
-        className="fixed top-0 right-0 h-full w-72 bg-gray-900/30 backdrop-blur-lg 
-                   border-l border-gray-600/30 text-gray-200 p-4 overflow-y-auto 
-                   shadow-[0_0_25px_rgba(0,0,0,0.4)]"
-        style={{ zIndex: 50 }}
+        className={`fixed top-0 right-0 h-full bg-gray-900/70 text-gray-200 p-4 overflow-y-auto border-l border-gray-700/40 shadow-[0_0_25px_rgba(0,0,0,0.4)] transition-transform duration-300 ease-in-out ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{
+          width: isMobile ? "220px" : "280px",
+          backdropFilter: "blur(6px)",
+          zIndex: 50,
+        }}
       >
         <h2 className="text-sm font-semibold mb-3 text-white drop-shadow-md">
           🎨 Kustomisasi Sangkar
@@ -76,8 +89,7 @@ export default function CustomizerPanel({
             {colorMeshes.map((mesh) => (
               <div
                 key={mesh}
-                className="flex items-center justify-between gap-2 bg-white/5 hover:bg-white/10 
-                           transition-all p-2 rounded-md border border-white/10"
+                className="flex items-center justify-between gap-2 bg-white/5 hover:bg-white/10 transition-all p-2 rounded-md border border-white/10"
               >
                 <div className="flex-1 text-[11px] text-gray-200 truncate">
                   {meshMap[mesh]}
@@ -90,8 +102,7 @@ export default function CustomizerPanel({
                   />
                   <button
                     onClick={() => onHighlight(mesh)}
-                    className="text-[10px] px-1.5 py-0.5 bg-blue-600/70 
-                               hover:bg-blue-500/90 rounded text-white"
+                    className="text-[10px] px-1.5 py-0.5 bg-blue-600/70 hover:bg-blue-500/90 rounded text-white"
                   >
                     🔍
                   </button>
@@ -110,8 +121,7 @@ export default function CustomizerPanel({
             {decalMeshes.map((mesh) => (
               <div
                 key={mesh}
-                className="bg-white/5 hover:bg-white/10 transition-all p-2 rounded-md 
-                           border border-white/10 flex flex-col gap-1"
+                className="bg-white/5 hover:bg-white/10 transition-all p-2 rounded-md border border-white/10 flex flex-col gap-1"
               >
                 <div className="flex justify-between items-center">
                   <div className="text-[11px] text-gray-200 truncate">
@@ -119,19 +129,16 @@ export default function CustomizerPanel({
                   </div>
                   <button
                     onClick={() => onHighlight(mesh)}
-                    className="text-[10px] px-1.5 py-0.5 bg-blue-600/70 hover:bg-blue-500/90 
-                               rounded text-white"
+                    className="text-[10px] px-1.5 py-0.5 bg-blue-600/70 hover:bg-blue-500/90 rounded text-white"
                   >
                     🔍
                   </button>
                 </div>
 
-                {/* Upload + Preview */}
                 <div className="flex items-center gap-2">
                   <label
                     htmlFor={`decal-${mesh}`}
-                    className="text-[11px] px-2 py-1 bg-blue-600/70 hover:bg-blue-500/90 
-                               rounded text-white cursor-pointer transition-all"
+                    className="text-[11px] px-2 py-1 bg-blue-600/70 hover:bg-blue-500/90 rounded text-white cursor-pointer transition-all"
                   >
                     Browse
                   </label>
@@ -148,14 +155,12 @@ export default function CustomizerPanel({
                       <img
                         src={previewImages[mesh]}
                         alt="Preview"
-                        className="w-12 h-12 object-cover rounded border border-gray-600/50 
-                                   cursor-pointer hover:opacity-80"
+                        className="w-12 h-12 object-cover rounded border border-gray-600/50 cursor-pointer hover:opacity-80"
                         onClick={() => setEditTarget(mesh)}
                       />
                       <button
                         onClick={() => setEditTarget(mesh)}
-                        className="text-[10px] px-1.5 py-0.5 bg-amber-600/70 hover:bg-amber-500/90 
-                                   rounded text-white"
+                        className="text-[10px] px-1.5 py-0.5 bg-amber-600/70 hover:bg-amber-500/90 rounded text-white"
                       >
                         Edit
                       </button>
@@ -176,6 +181,20 @@ export default function CustomizerPanel({
           </div>
         </section>
       </aside>
+
+      {/* === FLOATING TOGGLE (mobile only) === */}
+      {isMobile && (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="fixed bottom-5 right-5 bg-black/70 hover:bg-black/90 text-white border border-gray-600/50 rounded-lg w-11 h-11 flex items-center justify-center shadow-lg z-50 transition-all"
+        >
+          <div className="space-y-1">
+            <span className="block w-5 h-[2px] bg-white"></span>
+            <span className="block w-5 h-[2px] bg-white"></span>
+            <span className="block w-5 h-[2px] bg-white"></span>
+          </div>
+        </button>
+      )}
 
       {editTarget && (
         <ImageMappingEditor
