@@ -1,18 +1,19 @@
 // ============================================================
-// src/pages/Login.jsx (final version, with video background)
+// src/pages/Login.jsx (final version with Facebook + Google login)
 // ============================================================
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getAuth,
   GoogleAuthProvider,
+  FacebookAuthProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { doc, getFirestore, setDoc, getDoc } from "firebase/firestore";
 import app from "../firebase";
-import { Loader2, LogIn, UserPlus, Chrome, Mail, Lock } from "lucide-react";
+import { Loader2, LogIn, UserPlus, Chrome, Facebook, Mail, Lock } from "lucide-react";
 
 const db = getFirestore(app);
 
@@ -70,7 +71,25 @@ export default function Login() {
     }
   };
 
-  // 🧩 Cek atau buat dokumen user
+  // 🟦 Facebook login
+  const handleFacebookLogin = async () => {
+    const provider = new FacebookAuthProvider();
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      await ensureUserDoc(result.user);
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🧩 Pastikan dokumen user ada
   const ensureUserDoc = async (user) => {
     const userRef = doc(db, "users", user.uid);
     const snap = await getDoc(userRef);
@@ -81,7 +100,7 @@ export default function Login() {
         displayName: user.displayName || "",
         email: user.email,
         photoURL: user.photoURL || "",
-        role: "pending", // semua user baru butuh approval admin
+        role: "pending",
         createdAt: new Date(),
       });
     }
@@ -100,19 +119,17 @@ export default function Login() {
         <source src="/videos/login-bg.mp4" type="video/mp4" />
       </video>
 
-      {/* Overlay hitam transparan */}
+      {/* Overlay */}
       <div className="absolute inset-0 bg-black/60"></div>
 
       {/* Konten utama */}
       <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-md px-6">
-        {/* Logo */}
         <img
           src="/images/logo.png"
           alt="Logo"
           className="w-40 object-contain select-none"
         />
 
-        {/* Kotak Login */}
         <div className="w-full bg-black/70 p-6 rounded-2xl shadow-lg space-y-4">
           <h2 className="text-xl font-semibold text-center">
             {isRegister ? "Buat Akun Baru" : "Masuk ke Akun Anda"}
@@ -166,7 +183,6 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Garis pemisah */}
           <div className="flex items-center justify-center text-gray-400 text-sm">
             <span>atau</span>
           </div>
@@ -180,7 +196,15 @@ export default function Login() {
             <Chrome size={18} /> Masuk dengan Google
           </button>
 
-          {/* Toggle mode */}
+          {/* Tombol Facebook */}
+          <button
+            onClick={handleFacebookLogin}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 border border-gray-600 hover:bg-gray-800 transition rounded-lg py-2 font-medium"
+          >
+            <Facebook size={18} className="text-blue-500" /> Masuk dengan Facebook
+          </button>
+
           <p className="text-center text-sm text-gray-400 mt-3">
             {isRegister ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
             <button
