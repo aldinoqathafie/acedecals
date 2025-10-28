@@ -1,5 +1,5 @@
-import React, { Suspense, useEffect, useState } from "react";
-import { Canvas, useLoader } from "@react-three/fiber";
+import React, { Suspense, useEffect, useState, useRef } from "react";
+import { Canvas, useLoader, useFrame } from "@react-three/fiber";
 import {
   OrbitControls,
   Environment,
@@ -24,10 +24,9 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh,
       if (!node.isMesh) return;
       node.material = node.material.clone();
 
-      // 🌟 Tingkatkan pencahayaan dan pantulan
       node.material.roughness = 0.1;
-      node.material.metalness = 0.8;
-      node.material.envMapIntensity = 2.2;
+      node.material.metalness = 0.9;
+      node.material.envMapIntensity = 2.8;
       node.castShadow = true;
       node.receiveShadow = true;
 
@@ -35,7 +34,6 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh,
       const decalConf = decalData[meshName];
       const colorConf = colorData[meshName];
 
-      // 📜 Terapkan tekstur decal
       if (decalConf?.type === "decal" && decalConf?.value) {
         const url =
           typeof decalConf.value === "string"
@@ -47,7 +45,7 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh,
           (texture) => {
             texture.flipY = false;
             texture.colorSpace = THREE.SRGBColorSpace;
-            texture.minFilter = isMobile ? THREE.LinearFilter : THREE.LinearMipmapLinearFilter;
+            texture.minFilter = THREE.LinearFilter;
             texture.magFilter = THREE.LinearFilter;
             texture.anisotropy = isMobile ? 4 : 16;
             node.material.map = texture;
@@ -57,15 +55,13 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh,
           undefined,
           (err) => console.error("❌ Gagal load texture:", meshName, err)
         );
-      }
-      // 🎨 Terapkan warna
-      else if (colorConf?.type === "color") {
+      } else if (colorConf?.type === "color") {
         node.material.map = null;
         node.material.color = new THREE.Color(colorConf.value);
         node.material.needsUpdate = true;
       }
 
-      // ✨ Efek highlight
+      // Highlight mesh
       if (highlightMesh && highlightMesh === meshName) {
         node.material.emissive = new THREE.Color("#00ffff");
         node.material.emissiveIntensity = 0.6;
@@ -95,17 +91,16 @@ function BirdCage({ modelPath, colorData, decalData, onHoverMesh, highlightMesh,
   );
 }
 
-function WoodenTable({ isMobile }) {
-  const tex = useLoader(THREE.TextureLoader, "/textures/wood.jpg");
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(2, 2);
-  tex.anisotropy = isMobile ? 2 : 8;
+function RotatingEnvironment({ envMap }) {
+  const ref = useRef();
+  useFrame((state, delta) => {
+    if (ref.current) {
+      ref.current.rotation.y += delta * 0.05; // rotasi lambat dan smooth
+    }
+  });
 
   return (
-    <mesh position={[0, -1, 0]} castShadow receiveShadow>
-      <cylinderGeometry args={[1.4, 1.4, 0.08, 64]} />
-      <meshStandardMaterial map={tex} roughness={0.5} metalness={0.2} />
-    </mesh>
+    <primitive ref={ref} object={envMap} />
   );
 }
 
@@ -113,14 +108,28 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
   const [hoveredMesh, setHoveredMesh] = useState(null);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     setIsMobile(mobile);
   }, []);
 
+  // === Fullscreen toggle ===
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(console.error);
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  // === HDRI Lighting ===
   const envMap = useLoader(RGBELoader, "/textures/studio_small_08_2k.hdr");
   envMap.mapping = THREE.EquirectangularReflectionMapping;
+  envMap.encoding = THREE.sRGBEncoding;
 
   useEffect(() => {
     const handleMove = (e) => setCursorPos({ x: e.clientX + 15, y: e.clientY + 15 });
@@ -129,8 +138,8 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
   }, []);
 
   return (
-    <div className="relative w-full h-screen overflow-hidden" style={{ zIndex: 1 }}>
-      {/* 🔲 Background */}
+    <div className="relative w-full h-full" style={{ zIndex: 1 }}>
+      {/* 🌆 Background tetap tampil */}
       <div
         style={{
           position: "absolute",
@@ -138,12 +147,12 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           backgroundImage: "url('/images/workshop.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          filter: "brightness(0.95)",
+          filter: "brightness(0.9) sepia(0.25) saturate(1.15)",
           zIndex: 0,
         }}
       />
 
-      {/* 🏷️ Tooltip saat hover */}
+      {/* Tooltip hover mesh */}
       {hoveredMesh && (
         <div
           style={{
@@ -164,15 +173,15 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
         </div>
       )}
 
-      {/* 🎥 Canvas 3D */}
+      {/* === 3D Scene === */}
       <Canvas
         shadows={!isMobile}
         camera={{
-          position: isMobile ? [2.3, 2.1, 3.0] : [3.2, 2.5, 3.8],
+          position: isMobile ? [4.5, 3, 5.5] : [3.5, 2.4, 4.0],
           fov: isMobile ? 46 : 38,
         }}
         gl={{
-          toneMappingExposure: isMobile ? 1.3 : 1.5,
+          toneMappingExposure: isMobile ? 1.2 : 1.5,
           outputEncoding: THREE.sRGBEncoding,
           antialias: true,
         }}
@@ -182,15 +191,17 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           pointerEvents: "auto",
         }}
       >
-        {/* 💡 Lights */}
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[5, 6, 5]} intensity={1.2} castShadow />
-        <directionalLight position={[-4, 3, -3]} intensity={0.6} />
-        <hemisphereLight intensity={0.4} />
+        {/* ☀️ Cahaya warm studio */}
+        <ambientLight intensity={0.7} color={"#ffe4b3"} />
+        <directionalLight position={[4, 6, 5]} intensity={1.4} color={"#ffd9a6"} castShadow />
+        <spotLight position={[0, 5, 2]} angle={0.45} penumbra={0.5} intensity={2.5} color={"#fff2dd"} castShadow />
+        <pointLight position={[0, 1.5, 1.2]} intensity={0.7} color={"#ffdca8"} />
 
         <Suspense fallback={<Html center>Loading model...</Html>}>
-          {!isMobile && <Environment map={envMap} background={false} />}
-          <WoodenTable isMobile={isMobile} />
+          {/* HDRI reflection dinamis */}
+          <Environment files="/textures/studio_small_08_2k.hdr" background={false} />
+          <RotatingEnvironment envMap={new THREE.Group()} />
+
           <BirdCage
             modelPath={modelPath}
             colorData={colorData}
@@ -201,10 +212,10 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           />
           <ContactShadows
             position={[0, -0.35, 0]}
-            opacity={isMobile ? 0.35 : 0.5}
-            scale={isMobile ? 3.5 : 5}
-            blur={isMobile ? 2 : 3.5}
-            far={isMobile ? 1.0 : 1.6}
+            opacity={0.45}
+            scale={isMobile ? 4.2 : 4.8}
+            blur={2.8}
+            far={1.8}
           />
         </Suspense>
 
@@ -223,6 +234,14 @@ export default function Viewer3D({ modelPath, colorData, decalData, highlightMes
           </EffectComposer>
         )}
       </Canvas>
+
+      {/* 🔳 Tombol fullscreen */}
+      <button
+        onClick={toggleFullscreen}
+        className="absolute top-4 left-4 bg-black/60 hover:bg-black/80 text-white text-xs px-3 py-2 rounded-lg backdrop-blur-md border border-white/10 z-40 transition-all"
+      >
+        {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+      </button>
     </div>
   );
 }
