@@ -8,29 +8,25 @@ export default function CustomizerPanel({
   onDecalChange = () => {},
   onHighlight = () => {},
 }) {
-  const [editTarget, setEditTarget] = useState(null); // mesh yg sedang di-edit
-  const [previewImages, setPreviewImages] = useState({}); // thumbnail tiap mesh
-  const [uploadProgress, setUploadProgress] = useState({}); // progress upload
+  const [editTarget, setEditTarget] = useState(null);
+  const [previewImages, setPreviewImages] = useState({});
+  const [uploadProgress, setUploadProgress] = useState({});
 
   const modelKey = String(activeModel).replace(".glb", "");
   const meshMap = meshLabelMap[modelKey] || {};
   const meshKeys = Object.keys(meshMap);
-
   const decalMeshes = meshKeys.filter((m) => m.toLowerCase().includes("decal"));
   const colorMeshes = meshKeys.filter((m) => !m.toLowerCase().includes("decal"));
 
-  // 🟢 Warna
   const handleColor = (meshName, e) => {
     onColorChange(meshName, { type: "color", value: e.target.value });
   };
 
-  // 🟡 Upload gambar → tampilkan thumbnail
   const handleDecalUpload = (meshName, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-
     reader.onprogress = (ev) => {
       if (ev.lengthComputable) {
         const progress = Math.round((ev.loaded / ev.total) * 100);
@@ -42,6 +38,7 @@ export default function CustomizerPanel({
       const url = reader.result;
       setPreviewImages((prev) => ({ ...prev, [meshName]: url }));
       setUploadProgress((prev) => ({ ...prev, [meshName]: 100 }));
+      onDecalChange(meshName, { type: "decal", value: file });
       setTimeout(() => {
         setUploadProgress((prev) => ({ ...prev, [meshName]: null }));
       }, 600);
@@ -51,7 +48,6 @@ export default function CustomizerPanel({
     e.target.value = "";
   };
 
-  // 🟠 Simpan hasil crop dari editor
   const handleApplyCropped = (meshName, blob) => {
     const url = URL.createObjectURL(blob);
     setPreviewImages((prev) => ({ ...prev, [meshName]: url }));
@@ -65,6 +61,7 @@ export default function CustomizerPanel({
         className="fixed top-0 right-0 h-full w-72 bg-gray-900/30 backdrop-blur-lg 
                    border-l border-gray-600/30 text-gray-200 p-4 overflow-y-auto 
                    shadow-[0_0_25px_rgba(0,0,0,0.4)]"
+        style={{ zIndex: 50 }}
       >
         <h2 className="text-sm font-semibold mb-3 text-white drop-shadow-md">
           🎨 Kustomisasi Sangkar
@@ -166,7 +163,6 @@ export default function CustomizerPanel({
                   )}
                 </div>
 
-                {/* Progress Bar */}
                 {uploadProgress[mesh] && uploadProgress[mesh] < 100 && (
                   <div className="w-full bg-gray-700/40 rounded-full h-2 mt-1 overflow-hidden">
                     <div
@@ -181,7 +177,6 @@ export default function CustomizerPanel({
         </section>
       </aside>
 
-      {/* === Editor muncul setelah klik thumbnail === */}
       {editTarget && (
         <ImageMappingEditor
           imageSrc={previewImages[editTarget]}

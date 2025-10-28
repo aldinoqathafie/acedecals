@@ -1,107 +1,99 @@
-import React, { useRef, useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useRef } from "react";
 
-export default function ModelSelector({ models, activeModel, onSelect }) {
-  const scrollRef = useRef(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+/**
+ Props:
+ - models: [{id,name,file}]
+ - activeModel
+ - onSelect(file)
+ - highlightedMesh (string|null)
+ - onUploadDecalForHighlighted(file) -> should return true/false
+ - onResetModel()
+ - onResetHighlightedMesh()
+*/
 
-  const changeModel = (dir) => {
-    let newIndex = currentIndex + (dir === "left" ? -1 : 1);
-    if (newIndex < 0) newIndex = models.length - 1;
-    if (newIndex >= models.length) newIndex = 0;
-    setCurrentIndex(newIndex);
-    onSelect(models[newIndex].file);
-    scrollToIndex(newIndex);
+export default function ModelSelector({
+  models = [],
+  activeModel,
+  onSelect,
+  highlightedMesh,
+  onUploadDecalForHighlighted,
+  onResetModel,
+  onResetHighlightedMesh,
+}) {
+  const fileRef = useRef();
+
+  const triggerFile = () => {
+    fileRef.current?.click();
   };
-
-  const scrollToIndex = (index) => {
-    if (!scrollRef.current) return;
-    const child = scrollRef.current.children[index];
-    if (child) {
-      scrollRef.current.scrollTo({
-        left: child.offsetLeft - scrollRef.current.offsetWidth / 2 + child.offsetWidth / 2,
-        behavior: "smooth",
-      });
-    }
-  };
-
-  useEffect(() => {
-    scrollToIndex(currentIndex);
-  }, [currentIndex]);
 
   return (
-    <div className="relative w-full flex justify-center items-center mt-2 select-none">
-      {/* 🔹 Tombol panah kiri (melayang di luar box) */}
-      <button
-        onClick={() => changeModel("left")}
-        className="absolute -left-10 md:-left-14 p-3 rounded-full bg-gray-900/40 
-                   hover:bg-gray-800/60 transition shadow-lg backdrop-blur-sm border border-gray-700/30"
-      >
-        <ChevronLeft size={28} className="text-white" />
-      </button>
-
-      {/* 🔹 Container utama selector */}
-      <div
-        className="relative flex items-center justify-center
-                   bg-gray-900/40 backdrop-blur-md border border-gray-700/30
-                   rounded-2xl shadow-[0_4px_25px_rgba(0,0,0,0.4)]
-                   text-gray-200 py-3"
-        style={{
-          width: "92%", // 🔹 Lebar besar biar proporsional dan tanpa bar
-          height: "85px",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          ref={scrollRef}
-          className="flex gap-10 overflow-hidden w-full justify-center items-center"
-          style={{ scrollBehavior: "smooth" }}
-        >
-          <AnimatePresence initial={false}>
-            {models.map((model, index) => (
-              <motion.div
-                key={model.id}
-                onClick={() => {
-                  setCurrentIndex(index);
-                  onSelect(model.file);
-                }}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.4 }}
-                className={`flex items-center justify-center cursor-pointer
-                            transition-all rounded-xl
-                            ${
-                              activeModel === model.file
-                                ? "bg-blue-600/70 text-white shadow-md scale-105"
-                                : "bg-white/10 hover:bg-white/20"
-                            }`}
-                style={{
-                  minWidth: "200px", // 🔹 Cukup lebar agar teks panjang muat
-                  height: "55px",
-                  fontSize: "15px",
-                  fontWeight: "500",
-                  userSelect: "none",
-                  whiteSpace: "nowrap",
-                  textAlign: "center",
-                }}
+    <div className="w-full flex flex-col items-center">
+      <div className="w-full bg-white/5 backdrop-blur rounded-2xl px-3 py-2 flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* model list */}
+        <div className="flex gap-2 overflow-x-auto py-1">
+          {models.map((m) => {
+            const active = activeModel === m.file;
+            return (
+              <button
+                key={m.id}
+                onClick={() => onSelect(m.file)}
+                className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium ${
+                  active ? "bg-indigo-600 text-white" : "bg-white/8 text-white"
+                }`}
               >
-                {model.name}
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                {m.name}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* action buttons (sejajar di kanan pada md, di bawah pada mobile) */}
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={() => {
+              if (highlightedMesh) {
+                onResetHighlightedMesh?.();
+              } else {
+                onResetModel?.();
+              }
+            }}
+            className="px-3 py-2 rounded-lg text-sm bg-rose-600 text-white"
+            title={highlightedMesh ? "Reset highlighted mesh" : "Reset model"}
+          >
+            {highlightedMesh ? "Reset Mesh" : "Reset Model"}
+          </button>
+
+          <button
+            onClick={triggerFile}
+            className="px-3 py-2 rounded-lg text-sm bg-emerald-500 text-black"
+            title={highlightedMesh ? "Upload decal to highlighted mesh" : "Select mesh first to upload decal"}
+            disabled={!highlightedMesh}
+          >
+            Upload Decal
+          </button>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              const ok = onUploadDecalForHighlighted?.(f);
+              if (!ok) {
+                alert("Tidak ada mesh yang dipilih untuk decal. Klik mesh di model untuk memilih.");
+              }
+              e.target.value = "";
+            }}
+          />
         </div>
       </div>
 
-      {/* 🔹 Tombol panah kanan (melayang di luar box) */}
-      <button
-        onClick={() => changeModel("right")}
-        className="absolute -right-10 md:-right-14 p-3 rounded-full bg-gray-900/40 
-                   hover:bg-gray-800/60 transition shadow-lg backdrop-blur-sm border border-gray-700/30"
-      >
-        <ChevronRight size={28} className="text-white" />
-      </button>
+      {/* helper tip */}
+      <div className="mt-2 text-xs text-white/70 text-center">
+        {highlightedMesh ? `Selected mesh: ${highlightedMesh}` : "Klik bagian model untuk memilih mesh (lihat tooltip)."}
+      </div>
     </div>
   );
 }
